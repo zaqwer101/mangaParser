@@ -5,7 +5,7 @@ from lxml import html
 manga_name = "guran-buru"
 
 
-def getFileNames(pages):
+def getImageUrls(pages):
     str = ""
     a = []
     _pages = pages.split("pages:")[1]
@@ -47,7 +47,7 @@ while next != '':
     img_url = a[9].split("'")[1]
 
     print(img_url)
-    files = getFileNames(pages)
+    files = getImageUrls(pages)
     for i in range(len(files)):
         print(image_server_url + img_url + files[i])
         r = requests.get(image_server_url + img_url + files[i])
