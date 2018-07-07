@@ -28,22 +28,10 @@ def getMangaUrls(list_of_urls):
 
     return a
 
-
+#########
+# ATTENTION: Эту функцию я честно спиздил с гитхаба пользователя bradleyayers
+#########
 def fill_page_with_image(path, canvas):
-    """
-    Given the path to an image and a reportlab canvas, fill the current page
-    with the image.
-
-    This function takes into consideration EXIF orientation information (making
-    it compatible with photos taken from iOS devices).
-
-    This function makes use of ``canvas.setPageRotation()`` and
-    ``canvas.setPageSize()`` which will affect subsequent pages, so be sure to
-    reset them to appropriate values after calling this function.
-
-    :param   path: filesystem path to an image
-    :param canvas: ``reportlab.canvas.Canvas`` object
-    """
     from PIL import Image
 
     page_width, page_height = canvas._pagesize
