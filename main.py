@@ -33,49 +33,11 @@ def getMangaUrls(list_of_urls):
 #########
 def fill_page_with_image(path, canvas):
     from PIL import Image
-
     page_width, page_height = canvas._pagesize
-
     image = Image.open(path)
-    image_width, image_height = image.size
-
-    orientation = 1
-
-    # These are the possible values for the Orientation EXIF attribute:
-    ORIENTATIONS = {
-        1: "Horizontal (normal)",
-        2: "Mirrored horizontal",
-        3: "Rotated 180",
-        4: "Mirrored vertical",
-        5: "Mirrored horizontal then rotated 90 CCW",
-        6: "Rotated 90 CW",
-        7: "Mirrored horizontal then rotated 90 CW",
-        8: "Rotated 90 CCW",
-    }
     draw_width, draw_height = page_width, page_height
-    if orientation == 1:
-        canvas.setPageRotation(0)
-    elif orientation == 3:
-        canvas.setPageRotation(180)
-    elif orientation == 6:
-        image_width, image_height = image_height, image_width
-        draw_width, draw_height = page_height, page_width
-        canvas.setPageRotation(90)
-    elif orientation == 8:
-        image_width, image_height = image_height, image_width
-        draw_width, draw_height = page_height, page_width
-        canvas.setPageRotation(270)
-    else:
-        raise ValueError("Unsupported image orientation '%s'."
-                         % ORIENTATIONS[orientation])
-
-    if image_width > image_height:
-        page_width, page_height = page_height, page_width  # flip width/height
-        draw_width, draw_height = draw_height, draw_width
-        canvas.setPageSize((page_width, page_height))
-
-    canvas.drawImage(path, 0, 0, width=draw_width, height=draw_height,
-                     preserveAspectRatio=True)
+    canvas.setPageRotation(0)
+    canvas.drawImage(path, 0, 0, width=draw_width, height=draw_height, preserveAspectRatio=True)
 
 
 def downloadManga(manga_name):
@@ -85,8 +47,12 @@ def downloadManga(manga_name):
     current_volume = 1
     current_dir = manga_name + "/" + manga_name + "[" + str(current_volume) + "]"
     current_chapter = "01"
-    os.mkdir(manga_name)
-    os.mkdir(manga_name + "/" + manga_name + "[" + str(current_volume) + "]")
+    try:
+        os.mkdir(manga_name)
+        os.mkdir(manga_name + "/" + manga_name + "[" + str(current_volume) + "]")
+    except:
+        print("Dir exists")
+
     imagefile_names = []
     while next != '':
         r = requests.get(current_url)
@@ -102,15 +68,15 @@ def downloadManga(manga_name):
         files = getMangaUrls(list_of_urls)
         for i in range(len(files)):
             print(image_server_url + img_url + files[i])
-            r = requests.get(image_server_url + img_url + files[i])
             ii = str(i + 1)
             if len(ii) == 1:
                 ii = "0" + str(ii)
-            open(current_dir + "/" + manga_name + "_v" + str(current_volume) + "_c" + str(
-                current_chapter) + "_p" + ii + "." + files[i].split(".")[-1], "wb") \
-                .write(r.content)
-            imagefile_names.append(current_dir + "/" + manga_name + "_v" + str(current_volume) + "_c" + str(
-                current_chapter) + "_p" + ii + "." + files[i].split(".")[-1])
+            if(os.path.exists(current_dir + "/" + manga_name + "_v" + str(current_volume) + "_c" + str(current_chapter) + "_p" + ii + "." + files[i].split(".")[-1])):
+                pass
+            else:
+                r = requests.get(image_server_url + img_url + files[i])
+                open(current_dir + "/" + manga_name + "_v" + str(current_volume) + "_c" + str(current_chapter) + "_p" + ii + "." + files[i].split(".")[-1], "wb").write(r.content)
+            imagefile_names.append(current_dir + "/" + manga_name + "_v" + str(current_volume) + "_c" + str(current_chapter) + "_p" + ii + "." + files[i].split(".")[-1])
         new_current_volume = img_url.split('/')[4].split('-')[0]
         if new_current_volume != str(current_volume):
             os.mkdir(manga_name + "/" + manga_name + "[" + str(new_current_volume) + "]")
@@ -126,17 +92,34 @@ def downloadManga(manga_name):
     return imagefile_names
 
 
-def createPDF(manga_name):
-    volume_number = 1
-    for volume_dir in os.listdir(manga_name):
+def createPDF(manga_name, volume=0):
+
+    def sortByAlphabet(inputStr):
+        return inputStr[0]
+
+    if(volume == 0):
+        volume_number = 1
+        for volume_dir in sorted(os.listdir(manga_name)):
+            pdf = Canvas(manga_name + "_volume_" + str(volume_number) + ".pdf")
+            for image_file in sorted(os.listdir(manga_name + "/" + volume_dir)):
+                file_path = manga_name + "/" + volume_dir + "/" + image_file
+                fill_page_with_image(file_path, pdf)
+                pdf.showPage()
+            volume_number += 1
+            pdf.save()
+    else:
+        volume_number = volume
+        volume_dir = manga_name + "[" + str(volume) + "]"
         pdf = Canvas(manga_name + "_volume_" + str(volume_number) + ".pdf")
-        for image_file in os.listdir(manga_name + "/" + volume_dir):
+        files = os.listdir(manga_name + "/" + volume_dir)
+        files.sort(key=sortByAlphabet)
+        print(sorted(files))
+        for image_file in sorted(files):
             file_path = manga_name + "/" + volume_dir + "/" + image_file
             fill_page_with_image(file_path, pdf)
             pdf.showPage()
-        volume_number += 1
         pdf.save()
 
 
-print(downloadManga("guran-buru"))
-createPDF("guran-buru")
+print(downloadManga(manga_name))
+createPDF(manga_name)
